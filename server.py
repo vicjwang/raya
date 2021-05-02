@@ -2,10 +2,11 @@ import mimetypes
 import os
 import requests
 import shutil
-from flask import Flask
+from flask import Flask, render_template
 from twilio.rest import Client as TwilioClient
 from pymongo import MongoClient
 from .utils import extract_latlon_from_image, Incident
+from .constants import DB_NAME, TABLE_NAME
 
 
 app = Flask(__name__)
@@ -26,6 +27,8 @@ TMP_DIR = '/tmp'
 
 twilio_client = TwilioClient(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
 mongo_client = MongoClient()
+db = mongo_client[DB_NAME]
+table = db[TABLE_NAME]
 
 
 @app.route('/')
@@ -34,8 +37,9 @@ def root():
     Render map of all reported incidents.
     """
     # Retrieve incidents from database.
-    incidents = []
-    return 'hello world'
+    incidents = list(table.find())
+    print('vjw found {} incidents'.format(len(incidents)))
+    return render_template('root.html', MAPBOX_API_KEY=MAPBOX_API_KEY)
 
 
 @app.route('/incidents/refresh')
