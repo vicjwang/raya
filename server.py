@@ -3,10 +3,10 @@ import os
 import requests
 import shutil
 from flask import Flask
-from .utils import convert_dms_to_dd
-from exif import Image
 from twilio.rest import Client as TwilioClient
-from collections import namedtuple
+from pymongo import MongoClient
+from .utils import extract_latlon_from_image, Incident
+
 
 app = Flask(__name__)
 app.config.from_object(__name__)
@@ -25,23 +25,7 @@ TMP_DIR = '/tmp'
 
 
 twilio_client = TwilioClient(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
-
-Incident = namedtuple('Incident', 'lat lon created text')
-
-
-def extract_latlon_from_image(image_filepath):
-    with open(image_filepath, 'rb') as image_file:
-        image = Image(image_file)
-        if not image.has_exif:
-            raise RuntimeError('{} has no exif data'.format(image_filepath))
-
-        lat = image.gps_latitude
-        lat_ref = image.gps_latitude_ref
-        lon = image.gps_longitude
-        lon_ref = image.gps_longitude_ref
-        lat_dd = convert_dms_to_dd(*lat, lat_ref)
-        lon_dd = convert_dms_to_dd(*lon, lon_ref)
-        return lat_dd, lon_dd
+mongo_client = MongoClient()
 
 
 @app.route('/')
@@ -49,7 +33,13 @@ def root():
     """
     Render map of all reported incidents.
     """
+    # Retrieve incidents from database.
+    incidents = []
+    return 'hello world'
 
+
+@app.route('/incidents/refresh')
+def refresh_incidents():
     # Check if new messages need processing.
     messages = twilio_client.messages.list(to=TWILIO_MAIN_PHONE_NUMBER, limit=LIMIT)
 
@@ -88,8 +78,4 @@ def root():
             incident = Incident(lat=lat, lon=lon, created=created, text=text)
             print('vjw incident', incident)
             # TODO(vjw): Save to database.
-
-    # Retrieve incidents from database.
-    incidents = []
-    return 'hello world'
 
