@@ -2,7 +2,7 @@ from collections import namedtuple
 from exif import Image
 
 
-Incident = namedtuple('Incident', 'lat lon created text')
+Incident = namedtuple('Incident', 'lat lon created text image_uri')
 
 
 def convert_dms_to_dd(d, m, s, ref):

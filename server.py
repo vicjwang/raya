@@ -38,8 +38,14 @@ def root():
     """
     # Retrieve incidents from database.
     incidents = list(table.find())
-    print('vjw found {} incidents'.format(len(incidents)))
-    return render_template('root.html', MAPBOX_API_KEY=MAPBOX_API_KEY)
+    for incident in incidents:
+        del incident['_id']
+
+    return render_template(
+      'root.html',
+      MAPBOX_API_KEY=MAPBOX_API_KEY,
+      incidents=incidents
+    )
 
 
 @app.route('/incidents/refresh')
@@ -56,7 +62,6 @@ def refresh_incidents():
             media_url = TWILIO_API_DOMAIN + media.uri[:-5]
             media_sid = media.sid
             ext = mimetypes.guess_extension(media.content_type)
-            print('vjw media_url', media_url)
 
             # Store new images in /tmp.
             filepath = '{}{}'.format(os.path.join(TMP_DIR, media_sid), ext)
@@ -71,15 +76,12 @@ def refresh_incidents():
             resp.raw.decode_content = True
             with open(filepath, 'wb') as f:
                 shutil.copyfileobj(resp.raw, f)
-                print('vjw wrote to {}'.format(filepath))
 
             try:
                 lat, lon = extract_latlon_from_image(filepath)
             except RuntimeError as e:
-                print('vjw skipping', e)
                 continue
 
-            incident = Incident(lat=lat, lon=lon, created=created, text=text)
-            print('vjw incident', incident)
+            incident = Incident(lat=lat, lon=lon, created=created, text=text, image_uri=media_url)
             # TODO(vjw): Save to database.
 

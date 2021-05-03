@@ -15,9 +15,26 @@
 		var map = new mapboxgl.Map({
 			container: 'map',
 			style: 'mapbox://styles/mapbox/streets-v9',
-			center: [-97, 38],
+			center: [-97, 38], // USA center
 			zoom: 3
 		});
+
+    map.on('load', function() {
+      var incidents = {{ incidents|safe }};
+      incidents.forEach(function(incident) {
+        var popupHTML = '<div>';
+        popupHTML += '<h3>' + incident.text + '</h3>';
+        popupHTML += '<img src="' + incident.image_uri + '" />';
+        popupHTML += '</div>';
+        var popup = new mapboxgl.Popup({offset: [0, -15]})
+          .setHTML(popupHTML)
+
+        new mapboxgl.Marker()
+            .setLngLat([incident.lon, incident.lat])
+            .setPopup(popup)
+            .addTo(map);
+      });
+    });
   </script>
 </body>
 </html>
