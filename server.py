@@ -1,11 +1,8 @@
 import mimetypes
-import os
-import requests
-import shutil
 from flask import Flask, render_template
 from twilio.rest import Client as TwilioClient
 from pymongo import MongoClient
-from .utils import extract_latlon_from_image, Incident
+from .utils import extract_latlon_from_image, Incident, download_image
 from .constants import DB_NAME, TABLE_NAME
 
 
@@ -22,7 +19,6 @@ TWILIO_MAIN_PHONE_NUMBER = app.config['TWILIO_MAIN_PHONE_NUMBER']
 TWILIO_API_DOMAIN = 'https://api.twilio.com'
 
 LIMIT = 20
-TMP_DIR = '/tmp'
 
 
 twilio_client = TwilioClient(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
@@ -48,6 +44,24 @@ def root():
     )
 
 
+@app.route('/twilio/messages')
+def twilio_messages():
+    messages = twilio_client.messages.list(to=TWILIO_MAIN_PHONE_NUMBER, limit=LIMIT)
+    html = '<div>'
+
+    for message in messages:
+        if int(message.num_media) == 0:
+            continue
+        created = message.date_created
+        text= message.body
+        for media in message.media.list():
+            media_url = TWILIO_API_DOMAIN + media.uri[:-5]
+            html += '<div>' + media_url + '</div>'
+    html += '</div>'
+    return html
+    
+
+
 @app.route('/incidents/refresh')
 def refresh_incidents():
     # Check if new messages need processing.
@@ -62,20 +76,8 @@ def refresh_incidents():
             media_url = TWILIO_API_DOMAIN + media.uri[:-5]
             media_sid = media.sid
             ext = mimetypes.guess_extension(media.content_type)
-
-            # Store new images in /tmp.
-            filepath = '{}{}'.format(os.path.join(TMP_DIR, media_sid), ext)
-            if os.path.isfile(filepath):
-                continue
-
-            resp = requests.get(media_url, stream=True)
-
-            if resp.status_code != 200:
-                continue
-
-            resp.raw.decode_content = True
-            with open(filepath, 'wb') as f:
-                shutil.copyfileobj(resp.raw, f)
+            filename = media_sid + ext
+            filepath = download_image(media_url, filename)
 
             try:
                 lat, lon = extract_latlon_from_image(filepath)

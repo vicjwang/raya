@@ -1,8 +1,32 @@
+import os
+import requests
+import shutil
 from collections import namedtuple
 from exif import Image
 
 
 Incident = namedtuple('Incident', 'lat lon created text image_uri')
+TMP_DIR = '/tmp'
+
+
+def download_image(url, filename=None):
+    # Store new images in /tmp.
+    if filename is None:
+        filename = str(hash(url))
+    filepath = os.path.join(TMP_DIR, filename)
+    if os.path.isfile(filepath):
+        raise RuntimeError('File already exists: {}'.format(filepath))
+
+    resp = requests.get(url, stream=True)
+
+    if resp.status_code != 200:
+        raise RuntimeError('Invalid url: {}'.format(url))
+
+    resp.raw.decode_content = True
+    with open(filepath, 'wb') as f:
+        shutil.copyfileobj(resp.raw, f)
+
+    return filepath
 
 
 def convert_dms_to_dd(d, m, s, ref):

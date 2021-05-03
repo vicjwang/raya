@@ -24,7 +24,7 @@
       incidents.forEach(function(incident) {
         var popupHTML = '<div>';
         popupHTML += '<h3>' + incident.text + '</h3>';
-        popupHTML += '<img src="' + incident.image_uri + '" />';
+        popupHTML += '<img src="' + incident.image_uri + '" width="200" height="200" />';
         popupHTML += '</div>';
         var popup = new mapboxgl.Popup({offset: [0, -15]})
           .setHTML(popupHTML)
